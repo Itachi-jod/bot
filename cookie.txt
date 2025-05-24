@@ -1,54 +1,8 @@
 [
   {
-    "name": "_ga",
-    "value": "GA1.1.728636145.1727288583",
-    "domain": ".chromewebstore.google.com",
-    "path": "/",
-    "expires": 1779434538.182377,
-    "httpOnly": false,
-    "secure": false
-  },
-  {
-    "name": "AEC",
-    "value": "AVcja2ee-eIcFhDLGi-80O2WCOWP77LQ28wbgheVr1TEKmLNtiqD7tO_GaU",
-    "domain": ".google.com",
-    "path": "/",
-    "expires": 1759835764.948677,
-    "httpOnly": true,
-    "secure": true,
-    "sameSite": "Lax"
-  },
-  {
-    "name": "NID",
-    "value": "523=KBjAmWMYBd7ujh258ArK8QYCs2p18LmR7jTqGg2sybkl7YG4CI2_Rjr_oIEd2-ftIUydh4EJ6q1VDAAmv4vQe1ZNGWyjz2TXHxjCRKU5Xs4hCl_AdSAuNDjaEdKe8vlDTnyeKsPMPW5dSNuGloYldR5Y0TB1ZtcSVa3-KiwPB0R4RCZy3HqzRti9cSI4GD5hmWOYVmHsZdyIS1SGdA0mlD5WvcjEnT-MhkYF0B0r1QN2bYaBmc0Oh_1RDCLfBQ0-7ypEG9QVlyalIBBPF8uJS3pjBudmFtVxUFC6fuOeJb7Xl75Uc7jmSDITSPcyi0nR0R4P",
-    "domain": ".google.com",
-    "path": "/",
-    "expires": 1760685249.152987,
-    "httpOnly": true,
-    "secure": true
-  },
-  {
-    "name": "OTZ",
-    "value": "8042834_33_33__33_",
-    "domain": "chromewebstore.google.com",
-    "path": "/",
-    "expires": 1747466050,
-    "httpOnly": false,
-    "secure": true
-  },
-  {
-    "name": "_ga_8R344RQS3Z",
-    "value": "GS2.1.s1744874067$o1$g1$t1744874171$j0$l0$h0",
-    "domain": ".chromewebstore.google.com",
-    "path": "/",
-    "expires": 1779434171.390161,
-    "httpOnly": false,
-    "secure": false
-  },
-  {
     "name": "SOCS",
-    "value": "CAESHAgBEhJnd3NfMjAyNDA1MDgtMF9SQzEaAmVuIAEaBgiA04qyBg",
-    "domain": ".google.com",
+    "value": "CAESEwgDEgk2MzMwNDEwMjQaAmVuIAEaBgiA04qyBg",
+    "domain": ".youtube.com",
     "path": "/",
     "expires": 1779002173,
     "httpOnly": false,
@@ -56,31 +10,22 @@
     "sameSite": "Lax"
   },
   {
-    "name": "__Secure-ENID",
-    "value": "27.SE=oGpCh4XNx2ko1T28d3HWhn7bIj-y3Of2rkuR5S6QHn7lRGXLzgRpa7O4ZAJaJZSj6_8BK74LPcLFGQbWeWM8fskCi1fZhgY0TV-aBpSjvZjdwenp6_1wQnvVQD3yILxghbM7Zpz81a6m1-YEsMaoyHVERL2oKYFbrhZH6SWaf5hy8_xsG423uNOx73KSDXjNVjiJ2eua2cqEOsTPF9BQXyMRG-kJp773dQ",
-    "domain": ".google.com",
+    "name": "PREF",
+    "value": "f6=40000000&tz=Asia.Katmandu",
+    "domain": ".youtube.com",
     "path": "/",
-    "expires": 1779060974.140579,
+    "expires": 1782627201.650064,
+    "httpOnly": false,
+    "secure": true
+  },
+  {
+    "name": "__Secure-YEC",
+    "value": "CgstQ3dCdkVSbjhrVSiCx8XBBjIKCgJOUBIEGgAgTg%3D%3D",
+    "domain": ".youtube.com",
+    "path": "/",
+    "expires": 1782195169.853508,
     "httpOnly": true,
     "secure": true,
     "sameSite": "Lax"
-  },
-  {
-    "name": "_ga_C2B4EV4CGC",
-    "value": "GS1.1.1744874435.1.0.1744874444.0.0.0",
-    "domain": ".chromewebstore.google.com",
-    "path": "/",
-    "expires": 1779434444.851887,
-    "httpOnly": false,
-    "secure": false
-  },
-  {
-    "name": "_ga_KHZNC1Q6K0",
-    "value": "GS1.1.1744874049.8.1.1744874577.0.0.0",
-    "domain": ".chromewebstore.google.com",
-    "path": "/",
-    "expires": 1779434577.952926,
-    "httpOnly": false,
-    "secure": false
   }
 ]
