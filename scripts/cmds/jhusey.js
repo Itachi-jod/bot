@@ -19,16 +19,22 @@ module.exports = {
     author: "Lord Itachi",
     role: 0,
     shortDescription: "Chat with Jhusey AI",
-    longDescription: "Ask anything to Jhusey AI powered by Gemini",
+    longDescription: "Just mention 'jhusey' and it will reply!",
     category: "ai",
     guide: {
-      en: "{p}jhusey [your message]"
+      en: "Just type anything with 'jhusey' in the message"
     }
   },
 
-  onStart: async function ({ message, args, event }) {
-    const prompt = args.join(" ");
-    if (!prompt) return message.reply("Please enter your message.\nExample: jhusey What is love?");
+  // Dummy onStart to avoid install error
+  onStart: async function () {},
+
+  onChat: async function ({ message, event }) {
+    const content = event.body?.toLowerCase() || "";
+    if (!content.includes("jhusey")) return;
+
+    const prompt = content.replace(/jhusey/gi, "").trim();
+    if (!prompt) return message.reply("Yes? What would you like to ask?");
 
     const reply = await talkToJhusey(prompt);
     message.reply(reply, (err, info) => {
