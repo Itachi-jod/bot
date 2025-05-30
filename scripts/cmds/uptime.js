@@ -1,51 +1,32 @@
 module.exports = {
   config: {
     name: "uptime",
-    aliases: ["upt", "up"],
-    version: "2.0",
+    aliases: ["up", "upt"],
+    version: "1.2",
     author: "Lord Itachi",
+    countDown: 5,
     role: 0,
     shortDescription: {
-      en: "Shows bot uptime and usage stats"
+      en: "Shows how long the bot has been active"
     },
     longDescription: {
-      en: "Displays how long the bot has been running, along with total user and thread counts"
+      en: "Displays the total uptime in a fancy way"
     },
     category: "system",
     guide: {
-      en: "Use {p}uptime to check bot status"
+      en: "{pn}"
     }
   },
 
-  onStart: async function ({ api, event, usersData, threadsData }) {
-    try {
-      const allUsers = await usersData.getAll();
-      const allThreads = await threadsData.getAll();
+  onStart: async function ({ api, event }) {
+    const uptime = process.uptime(); // in seconds
+    const days = Math.floor(uptime / (60 * 60 * 24));
+    const hours = Math.floor((uptime % (60 * 60 * 24)) / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = Math.floor(uptime % 60);
 
-      const uptime = process.uptime();
-      const days = Math.floor(uptime / 86400);
-      const hours = Math.floor((uptime % 86400) / 3600);
-      const minutes = Math.floor((uptime % 3600) / 60);
-      const seconds = Math.floor(uptime % 60);
+    const msg = `🤍 𝗕𝗼𝘁 𝗦𝘁𝗮𝘁𝘂𝘀\n━━━━━━━━━━━━━━━\n📆 Days   : ${days}\n⏰ Hours  : ${hours}\n🕰️ Minutes: ${minutes}\n⏱️ Seconds: ${seconds}\n━━━━━━━━━━━━━━━\n✅ 𝗧𝗵𝗲 𝗯𝗼𝘁 𝗶𝘀 𝗿𝘂𝗻𝗻𝗶𝗻𝗴 𝘀𝗺𝗼𝗼𝘁𝗵𝗹𝘆!`;
 
-      const formattedUptime = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-
-      const msg = 
-`───「 BOT STATUS 」───
-⏱ Uptime    : ${formattedUptime}
-👤 Users     : ${allUsers.length}
-💬 Threads   : ${allThreads.length}
-────────────────────`;
-
-      const gifUrl = "https://i.ibb.co/LDGHD4Kj/image.gif"; // You can change this
-
-      api.sendMessage({
-        body: msg,
-        attachment: await global.utils.getStreamFromURL(gifUrl)
-      }, event.threadID);
-    } catch (error) {
-      console.error(error);
-      api.sendMessage("⚠️ An error occurred while retrieving uptime info.", event.threadID);
-    }
+    api.sendMessage(msg, event.threadID, event.messageID);
   }
 };
