@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "shoti",
     aliases: [],
-    author: "Vex_Kshitiz",
+    author: "Asmit Adk",
     version: "2.0",
     cooldowns: 10,
     role: 0,
@@ -16,41 +16,56 @@ module.exports = {
     guide: "{p}shoti",
   },
 
-  onStart: async function ({ api, event, args, message }) {
+  onStart: async function ({ api, event, message }) {
     api.setMessageReaction("⏰", event.messageID, (err) => {}, true);
 
     try {
-      const response = await axios.get("https://shoti2-0-hfx0.onrender.com/kshitiz");
-      const postData = response.data.posts;
-      const randomIndex = Math.floor(Math.random() * postData.length);
-      const randomPost = postData[randomIndex];
+      const response = await axios.get("https://shoti-api-by-asmit.vercel.app/shoti/video");
+      const data = response.data.data;
 
-      const videoUrls = randomPost.map(url => url.replace(/\\/g, "/"));
+      // Video URL
+      const videoUrl = data.content.replace(/\\/g, "/");
 
-      const selectedUrl = videoUrls[Math.floor(Math.random() * videoUrls.length)];
+      // Download video stream
+      const videoResponse = await axios.get(videoUrl, { responseType: "stream" });
 
-      const videoResponse = await axios.get(selectedUrl, { responseType: "stream" });
-
+      // Prepare temp file path
       const tempVideoPath = path.join(__dirname, "cache", `${Date.now()}.mp4`);
       const writer = fs.createWriteStream(tempVideoPath);
+
       videoResponse.data.pipe(writer);
 
       writer.on("finish", async () => {
         const stream = fs.createReadStream(tempVideoPath);
-        const user = response.data.user || "@user_unknown";
+
+        // Prepare user info string
+        const userInfo = data.user?.nickname
+          ? `${data.user.nickname} (${data.user.username || "unknown"})`
+          : data.user?.username || "Unknown User";
+
+        const title = data.title || "No title";
+
         await message.reply({
-          body: `username:"${user}"`,
+          body: `Title: ${title}\nUser: ${userInfo}`,
           attachment: stream,
         });
+
         api.setMessageReaction("✅", event.messageID, (err) => {}, true);
+
+        // Clean up temp file
         fs.unlink(tempVideoPath, (err) => {
           if (err) console.error(err);
           console.log(`Deleted ${tempVideoPath}`);
         });
       });
+
+      writer.on("error", (err) => {
+        console.error(err);
+        message.reply("Error writing the video file.");
+      });
     } catch (error) {
       console.error(error);
       message.reply("Sorry, an error occurred while processing your request.");
     }
-  }
+  },
 };
