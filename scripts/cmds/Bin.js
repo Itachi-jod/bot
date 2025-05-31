@@ -6,18 +6,18 @@ module.exports = {
   config: {
     name: "bin",
     version: "1.1",
-    author: "SANDIP",
+    author: "Lord Itachi", // changed as per your preferred author name
     countDown: 5,
     role: 0,
     shortDescription: {
-      en: "Upload files to Pastebin and send link"
+      en: "📤 Upload a file to Pastebin"
     },
     longDescription: {
-      en: "Uploads files to Pastebin and provides a link to access the file."
+      en: "Uploads any file from the 'cmds' folder to Pastebin and returns the raw link."
     },
     category: "owner",
     guide: {
-      en: "Use {p}bin <filename> to upload a file to Pastebin. The file must be located in the 'cmds' folder."
+      en: "⚙️ Usage: {p}bin <filename>\nExample: {p}bin autodl"
     }
   },
 
@@ -27,31 +27,32 @@ module.exports = {
     });
 
     if (!args[0]) {
-      return api.sendMessage("❌ Please specify a file name.", event.threadID);
+      return api.sendMessage("❌ Please provide a filename.\nExample: bin autodl", event.threadID);
     }
 
-    const fileName = args[0];
-    const filePath = path.join(__dirname, '..', 'cmds', `${fileName}.js`);
+    const rawName = args[0].replace(/\.js$/, ''); // remove .js if provided
+    const filePath = path.join(__dirname, '..', 'cmds', `${rawName}.js`);
 
     if (!fs.existsSync(filePath)) {
-      return api.sendMessage("❌ File not found! Ensure the file exists in the 'cmds' folder.", event.threadID);
+      return api.sendMessage("❌ File not found in 'cmds' folder. Check the name again.", event.threadID);
     }
 
     try {
-      const data = fs.readFileSync(filePath, 'utf8');
-      const paste = await pastebin.createPaste({
-        text: data,
-        title: fileName,
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+
+      const url = await pastebin.createPaste({
+        text: fileContent,
+        title: rawName,
         format: null,
-        privacy: 1, // Private paste
+        privacy: 1
       });
 
-      const rawPaste = paste.replace("pastebin.com", "pastebin.com/raw");
-      api.sendMessage(`✅ Successfully uploaded to Pastebin:\n${rawPaste}`, event.threadID);
+      const rawLink = url.replace("pastebin.com", "pastebin.com/raw");
+      return api.sendMessage(`✅ Uploaded to Pastebin:\n🔗 ${rawLink}`, event.threadID);
 
-    } catch (error) {
-      console.error("Error uploading to Pastebin:", error.message || error);
-      api.sendMessage("❌ Failed to upload to Pastebin. Please check logs for details.", event.threadID);
+    } catch (err) {
+      console.error("Pastebin Upload Error:", err);
+      return api.sendMessage("❌ Failed to upload. Pastebin error occurred.", event.threadID);
     }
   }
 };
