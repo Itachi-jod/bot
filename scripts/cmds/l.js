@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const chatHistoryDir = 'groqllama70b';
-const apiKey = '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';
+const apiKey = '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';
 
 const groq = new Groq({ apiKey });
 
@@ -13,7 +13,7 @@ module.exports = {
     config: {
         name: 'l',
         version: '1.1.11',
-        author: 'Shikaki',
+        author: 'Lord Itachi',
         countDown: 0,
         role: 0,
         category: 'Ai',
@@ -269,4 +269,4 @@ function clearChatHistory(uid) {
     } catch (err) {
         console.error("Error deleting chat history file:", err);
     }
-    }
+}
