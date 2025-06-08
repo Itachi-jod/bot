@@ -55,9 +55,9 @@ module.exports = {
       });
 
       const fileSizeMB = fs.statSync(filePath).size / (1024 * 1024);
-      if (fileSizeMB > 25) {
+      if (fileSizeMB > 100) {
         fs.unlinkSync(filePath);
-        return message.reply("❌ The video is too large to send (over 25MB).");
+        return message.reply("❌ The video is too large to send (over 100MB).");
       }
 
       // Detect platform from the original URL
