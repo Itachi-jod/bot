@@ -1,6 +1,7 @@
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const { parse } = require("url");
 
 module.exports = {
   config: {
@@ -23,7 +24,6 @@ module.exports = {
     try {
       const text = event.body || "";
       const urlMatch = text.match(/https?:\/\/[^\s]+/);
-
       if (!urlMatch) return;
 
       const url = urlMatch[0];
@@ -31,6 +31,7 @@ module.exports = {
 
       const res = await axios.get(apiUrl, { timeout: 30000 });
       const videoUrl = res.data?.data?.low;
+      const title = res.data?.data?.title || "Unknown Title";
 
       if (!videoUrl || !videoUrl.startsWith("http")) return;
 
@@ -59,9 +60,18 @@ module.exports = {
         return message.reply("❌ The video is too large to send (over 25MB).");
       }
 
+      // Detect platform from the original URL
+      const hostname = parse(url).hostname || "";
+      let platform = "Unknown";
+      if (hostname.includes("tiktok")) platform = "TikTok";
+      else if (hostname.includes("instagram")) platform = "Instagram";
+      else if (hostname.includes("facebook")) platform = "Facebook";
+      else if (hostname.includes("youtube")) platform = "YouTube";
+      else if (hostname.includes("x.com") || hostname.includes("twitter")) platform = "Twitter";
+
       await api.sendMessage(
         {
-          body: "✅ Here's your video!",
+          body: `Here's your downloaded video!\n\nPlatform: ${platform}\nTitle: ${title}`,
           attachment: fs.createReadStream(filePath),
         },
         event.threadID,
