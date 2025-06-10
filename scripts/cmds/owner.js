@@ -12,31 +12,28 @@ module.exports = {
     shortDescription: { en: "Displays information about the bot's creator 🤫🗿🚬." },
     longDescription: { en: "Provides details about the bot's creator, including name, Facebook link, photo, and video. 🫵🏻😂💗" },
     category: "owner",
-    guide: { en: "Use {p}admin to reveal the creator's details. 🤫🗿" },
+    guide: { en: "Use {p}owner to reveal the creator's details. 🤫🗿" },
     creatorDetails: {
       name: "Itachi",
-      fbLink: "https://www.facebook.com/itachisenseihere?mibextid=ZbWKwL",
-      photoLink: "https://i.ibb.co/dJGjmHXZ/image.jpg", // Replace with a valid photo URL
-      videoLink: "https://raw.githubusercontent.com/zoro-77/video-hosting/main/cache/video-1735180380937-959.mp4", // Replace with a valid video URL
+      fbLink: "https://www.facebook.com/profile.php?id=100088286122703", // Updated FB link
+      photoLink: "https://i.ibb.co/VWCRL3Rn/image.jpg", // ✅ New Image
+      videoLink: "https://raw.githubusercontent.com/zoro-77/video-hosting/main/cache/video-1735180380937-959.mp4",
     },
   },
+
   onStart: async function ({ api, event }) {
     try {
       const { creatorDetails } = this.config;
 
-      // Ensure cache directory exists
       const cacheDir = path.join(__dirname, "cache");
       await fs.ensureDir(cacheDir);
 
-      // Fetch and save the creator's photo
       const photoPath = path.join(cacheDir, "creator_photo.jpg");
       const photoResponse = await axios.get(creatorDetails.photoLink, { responseType: "arraybuffer" });
       await fs.outputFile(photoPath, photoResponse.data);
 
-      // Prepare the message
       const message = `Meet the Creator! 🫵🏻💗\n\nName: ${creatorDetails.name} 🗿\nFacebook: ${creatorDetails.fbLink} 🚬`;
 
-      // Send the photo and message
       await api.sendMessage(
         {
           body: message,
@@ -45,12 +42,10 @@ module.exports = {
         event.threadID,
         async () => {
           try {
-            // Fetch and save the creator's video
             const videoPath = path.join(cacheDir, "creator_video.mp4");
             const videoResponse = await axios.get(creatorDetails.videoLink, { responseType: "arraybuffer" });
             await fs.outputFile(videoPath, videoResponse.data);
 
-            // Send the video
             await api.sendMessage(
               {
                 body: "Here's a short video of the creator! 😍💗",
@@ -59,7 +54,6 @@ module.exports = {
               event.threadID
             );
 
-            // Clean up files
             try {
               await fs.unlink(photoPath);
               await fs.unlink(videoPath);
@@ -73,7 +67,7 @@ module.exports = {
         }
       );
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Error in Admin Command:`, error.message);
+      console.error(`[${new Date().toISOString()}] Error in Owner Command:`, error.message);
       await api.sendMessage("An error occurred while fetching the creator's details. 🤫", event.threadID);
     }
   },
