@@ -6,7 +6,7 @@ const { parse } = require("url");
 module.exports = {
   config: {
     name: "autolink",
-    version: "2.0",
+    version: "2.1",
     author: "Lord Itachi",
     countDown: 5,
     role: 0,
@@ -16,10 +16,8 @@ module.exports = {
     guide: "No need to use command. Just send a video link.",
   },
 
-  // Required dummy onStart to satisfy GoatBot
   onStart: async function () {},
 
-  // Main auto-link detection
   onChat: async function ({ message, event, api }) {
     try {
       const text = event.body || "";
@@ -29,11 +27,17 @@ module.exports = {
       const url = urlMatch[0];
       const apiUrl = `https://dev-priyanshi.onrender.com/api/alldl?url=${encodeURIComponent(url)}`;
 
+      // React to message with ⏳ while processing
+      api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
       const res = await axios.get(apiUrl, { timeout: 30000 });
       const videoUrl = res.data?.data?.low;
       const title = res.data?.data?.title || "Unknown Title";
 
-      if (!videoUrl || !videoUrl.startsWith("http")) return;
+      if (!videoUrl || !videoUrl.startsWith("http")) {
+        api.setMessageReaction("❌", event.messageID, () => {}, true);
+        return;
+      }
 
       const response = await axios({
         method: "GET",
@@ -57,10 +61,10 @@ module.exports = {
       const fileSizeMB = fs.statSync(filePath).size / (1024 * 1024);
       if (fileSizeMB > 100) {
         fs.unlinkSync(filePath);
+        api.setMessageReaction("❌", event.messageID, () => {}, true);
         return message.reply("❌ The video is too large to send (over 100MB).");
       }
 
-      // Detect platform from the original URL
       const hostname = parse(url).hostname || "";
       let platform = "Unknown";
       if (hostname.includes("tiktok")) platform = "TikTok";
@@ -71,7 +75,7 @@ module.exports = {
 
       await api.sendMessage(
         {
-          body: `Here's your downloaded video!\n\nPlatform: ${platform}\nTitle: ${title}`,
+          body: `Here's your downloaded video!\n\n Platform: ${platform}\n Title: ${title}`,
           attachment: fs.createReadStream(filePath),
         },
         event.threadID,
@@ -79,13 +83,17 @@ module.exports = {
           fs.unlinkSync(filePath);
           if (err) {
             console.error("Send Message Error:", err.message);
+            api.setMessageReaction("❌", event.messageID, () => {}, true);
             return message.reply("❌ Failed to send the video.");
           }
+          // React ✅ when finished successfully
+          api.setMessageReaction("✅", event.messageID, () => {}, true);
         },
         event.messageID
       );
     } catch (err) {
       console.error("AutoLink Error:", err.message);
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
     }
   },
 };
