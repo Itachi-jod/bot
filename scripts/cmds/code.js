@@ -49,7 +49,7 @@ module.exports = {
 function installScript(fileName, content, message) {
   const owner = 'Itachi-jod'; 
   const repo = 'Itachi-jod'; 
-  const token = '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';
+  const token = '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';
 
   
   //watch this video for guide to get token https://youtu.be/9lGcbQR4k4Y?si=meL8polnqvxqHdUJ
