@@ -45,7 +45,7 @@ module.exports = {
 			confirmThisThread: "Please react to this message to confirm change prefix in your box chat",
 			successGlobal: "Changed prefix of system bot to: %1",
 			successThisThread: "Changed prefix in your box chat to: %1",
-			myPrefix: "🌐 System prefix: %1\n🛸 Your box chat prefix: %2"
+			myPrefix: "🌐 My prefix: %1\n🛸 Your Group chat prefix: %2"
 		}
 	},
 
@@ -94,10 +94,24 @@ module.exports = {
 		}
 	},
 
-	onChat: async function ({ event, message, getLang }) {
-		if (event.body && event.body.toLowerCase() === "prefix")
-			return () => {
-				return message.reply(getLang("myPrefix", global.GoatBot.config.prefix, utils.getPrefix(event.threadID)));
-			};
+	onChat: async function ({ event, message, getLang, api }) {
+		const { body, threadID } = event;
+		if (!body) return;
+	
+		const lowered = body.toLowerCase();
+		if (lowered === "prefix") {
+			const prefix = utils.getPrefix(threadID);
+	
+			
+			const myPrefixMessage = getLang("myPrefix", global.GoatBot.config.prefix, prefix);
+	
+			
+			try {
+				await api.shareContact(myPrefixMessage, api.getCurrentUserID(), threadID);
+			} catch (err) {
+				console.error("Contact share error:", err);
+				await message.reply(myPrefixMessage);
+			}
+		}
 	}
 };
