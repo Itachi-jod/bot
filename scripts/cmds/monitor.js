@@ -23,10 +23,10 @@ module.exports = {
       const r = Math.floor(Math.random() * s.length);
       const q = s[r];
 
-      const u = `https://pin-two.vercel.app/pin?search=${encodeURIComponent(q)}`;
+      const u = `https://kaiz-apis.gleeze.com/api/pinterest?search=${encodeURIComponent(q)}&apikey=7eac9dce-b646-4ad1-8148-5b58eddaa2cc`;
 
       const a = await axios.get(u);
-      const l = a.data.result;
+      const l = a.data.data;
 
       const i = Math.floor(Math.random() * l.length);
       const p = l[i];
