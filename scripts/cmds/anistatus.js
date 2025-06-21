@@ -1,87 +1,70 @@
 const axios = require("axios");
 const fs = require("fs-extra");
-
+const path = require("path");
 
 module.exports = {
+ threadStates: {},
 
-  threadStates: {},
+ config: {
+ name: "anistatus",
+ aliases: ["as"],
+ version: "1.0",
+ author: "MinatoCodes",
+ countDown: 15,
+ role: 0,
+ shortDescription: "anime status video from tiktok",
+ longDescription: "anime status video from tiktok",
+ category: "media",
+ guide: {
+ en: "{p}{n}",
+ },
+ },
 
-  config: {
-    name: 'anistatus',
-    aliases: ['as'],
-    version: '1.0',
-    author: 'Kshitiz',
-    countDown: 5,
-    role: 0,
-    shortDescription: 'anime status',
-    longDescription: '',
-    category: 'media',
-    guide: {
-      en: '{p}{n}',
-    }
-  },
+ onStart: async function ({ api, event }) {
+ const threadID = event.threadID;
+ const messageID = event.messageID;
+ const cacheDir = path.join(__dirname, "cache");
 
+ try {
+ if (!this.threadStates[threadID]) this.threadStates[threadID] = {};
 
-  onStart: async function ({ api, event }) {
-    const threadID = event.threadID;
+ await fs.ensureDir(cacheDir);
+ api.setMessageReaction("🤍", messageID, () => {}, true);
 
-    if (!this.threadStates[threadID]) {
-      this.threadStates[threadID] = {};
-    }
+ const apiUrl = "https://ani-status-itachi.vercel.app/api/status"; // fixed missing protocol
+ const response = await axios.get(apiUrl);
 
-    try {
-      api.setMessageReaction("⏰", event.messageID, (err) => {}, true);  
+ const videoUrl = response.data?.video?.play;
 
-      const apiUrl = "https://ani-status.vercel.app/kshitiz";  
-      const response = await axios.get(apiUrl);
+ if (response.data.success && videoUrl) {
+ const filePath = path.join(cacheDir, `anistatus_${Date.now()}.mp4`);
+ await this.downloadVideo(videoUrl, filePath);
 
-      if (response.data.url) {
-        const tikTokUrl = response.data.url;
-        console.log(`TikTok Video URL: ${tikTokUrl}`);
+ if (fs.existsSync(filePath)) {
+ await api.sendMessage({
+ body: "Random anime status video.",
+ attachment: fs.createReadStream(filePath),
+ }, threadID, () => fs.unlink(filePath), messageID);
+ } else {
+ return api.sendMessage("⚠️ Failed to download video.", threadID, messageID);
+ }
+ } else {
+ return api.sendMessage("⚠️ Failed to fetch video URL from API.", threadID, messageID);
+ }
 
-        const lado = `https://tikdl-video.vercel.app/tiktok?url=${encodeURIComponent(tikTokUrl)}`;
-        const puti = await axios.get(lado);
+ } catch (err) {
+ console.error(`[ANISTATUS] Error: ${err.message}`);
+ return api.sendMessage("❌ An error occurred while processing command.", event.threadID, event.messageID);
+ }
+ },
 
-        if (puti.data.videoUrl) {
-          const videoUrl = puti.data.videoUrl;
-          console.log(`Downloadable Video URL: ${videoUrl}`);
-
-          const cacheFilePath =  __dirname + `/cache/${Date.now()}.mp4`;
-          await this.downloadVideo(videoUrl, cacheFilePath);
-
-          if (fs.existsSync(cacheFilePath)) {
-            await api.sendMessage({
-              body: "Random anime status video.",
-              attachment: fs.createReadStream(cacheFilePath),
-            }, threadID, event.messageID);
-
-            fs.unlinkSync(cacheFilePath);
-          } else {
-            api.sendMessage("Error downloading the video.", threadID);
-          }
-        } else {
-          api.sendMessage("Error fetching video URL.", threadID);
-        }
-      } else {
-        api.sendMessage("Error fetching data from external API.", threadID);
-      }
-    } catch (err) {
-      console.error(err);
-      api.sendMessage("An error occurred while processing the anistatus command.", threadID);
-    }
-  },
-
-  downloadVideo: async function (url, cacheFilePath) {
-    try {
-      const response = await axios({
-        method: "GET",
-        url: url,
-        responseType: "arraybuffer"
-      });
-
-      fs.writeFileSync(cacheFilePath, Buffer.from(response.data, "utf-8"));
-    } catch (err) {
-      console.error(err);
-    }
-  },
+ downloadVideo: async function (url, filePath) {
+ try {
+ const response = await axios.get(url, { responseType: "arraybuffer" });
+ await fs.writeFile(filePath, Buffer.from(response.data));
+ } catch (err) {
+ console.error(`[ANISTATUS] Download error: ${err.message}`);
+ throw err;
+ }
+ }
 };
