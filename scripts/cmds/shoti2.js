@@ -6,7 +6,7 @@ module.exports = {
  config: {
  name: "shoti2",
  aliases: ["shoti", "tiktokgirl", "so"],
- version: "3.0",
+ version: "3.1",
  author: "💫 Lord Denish 👑 | fb.com/share/1BXQiRBRBr/",
  countDown: 3,
  role: 0,
@@ -25,7 +25,9 @@ module.exports = {
  const usernames = [
  "pinaybeautys", "ulzzangclub", "girl_indonesia0", "kripaverse", "rina55544",
  "beautifulgirlcollections", "yourmommyy__", "_sophiya1", "svn9o.__.ww",
- "hninphyusin2004", "sune_.0", "hvcqi", "mama_diorr", "allesandraniebres"
+ "hninphyusin2004", "sune_.0", "hvcqi", "mama_diorr", "allesandraniebres",
+ "ashlee_abigan04", "nasty.d44", "iamraikii", "yannaa._1", "ziyii._only",
+ "kigs.prismprincesses", "stephaniecaranguian", "moodie097"
  ];
 
  try {
@@ -49,9 +51,8 @@ module.exports = {
  return api.sendMessage("❌ No videos found. Please try again later.", threadID, messageID);
  }
 
- // Pick a truly random video
  const random = allVideos[Math.floor(Math.random() * allVideos.length)];
- const videoUrl = random.play; // No watermark
+ const videoUrl = random.play;
  const caption = random.title || "No caption";
  const musicTitle = random.music?.title || "Unknown Music";
 
@@ -64,12 +65,12 @@ module.exports = {
  const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
 
  api.sendMessage({
- body: `${musicTitle}\n ${caption}\n Sent in ${timeTaken}s`,
+ body: `🎶 ${musicTitle}\n📝 ${caption}\n📥 Sent in ${timeTaken}s`,
  attachment: fs.createReadStream(tempPath)
  }, threadID, () => fs.unlinkSync(tempPath), messageID);
 
  } catch (err) {
- console.error(" Error:", err.message);
+ console.error("💥 Error:", err.message);
  return api.sendMessage("❌ Error while fetching TikTok video.", threadID, messageID);
  }
  }
