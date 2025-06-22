@@ -6,14 +6,14 @@ module.exports = {
  config: {
  name: "shoti2",
  aliases: ["shoti", "tiktokgirl", "so"],
- version: "2.2",
+ version: "3.0",
  author: "💫 Lord Denish 👑 | fb.com/share/1BXQiRBRBr/",
  countDown: 3,
  role: 0,
  shortDescription: "Random TikTok shoti (AE) video",
- longDescription: "Fetches random TikTok shoti from 15 usernames using Tikwm API",
+ longDescription: "Fetches high-quality random TikTok videos with music info and no watermark",
  category: "media",
- guide: "{p}shoti2 (or use aliases)"
+ guide: "{p}shoti2 or use aliases like {p}shoti or {p}so"
  },
 
  onStart: async function ({ event, api }) {
@@ -32,7 +32,7 @@ module.exports = {
  const results = await Promise.allSettled(usernames.map(username =>
  axios.post("https://tikwm.com/api/user/posts", {
  unique_id: username,
- count: 5
+ count: 20
  }, {
  headers: { "Content-Type": "application/json" }
  })
@@ -49,8 +49,11 @@ module.exports = {
  return api.sendMessage("❌ No videos found. Please try again later.", threadID, messageID);
  }
 
+ // Pick a truly random video
  const random = allVideos[Math.floor(Math.random() * allVideos.length)];
- const videoUrl = random.play;
+ const videoUrl = random.play; // No watermark
+ const caption = random.title || "No caption";
+ const musicTitle = random.music?.title || "Unknown Music";
 
  const tempPath = path.join(__dirname, `${Date.now()}.mp4`);
  const videoRes = await axios.get(videoUrl, { responseType: "stream" });
@@ -61,12 +64,12 @@ module.exports = {
  const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
 
  api.sendMessage({
- body: `📥 Downloaded and sent in ${timeTaken}s`,
+ body: `${musicTitle}\n ${caption}\n Sent in ${timeTaken}s`,
  attachment: fs.createReadStream(tempPath)
  }, threadID, () => fs.unlinkSync(tempPath), messageID);
 
  } catch (err) {
- console.error("💥 Error:", err.message);
+ console.error(" Error:", err.message);
  return api.sendMessage("❌ Error while fetching TikTok video.", threadID, messageID);
  }
  }
