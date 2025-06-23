@@ -41,7 +41,8 @@ module.exports = {
 					return;
 				const hours = getTime("HH");
 
-				const threadName = threadData.threadName;
+            const threadInfo = await api.getThreadInfo(threadID);
+		   	const threadName = threadData.threadName;
 				const userName = await usersData.getName(leftParticipantFbId);
 				const memberCount = threadInfo.memberIDs.length;
 
