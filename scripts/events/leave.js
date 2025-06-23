@@ -25,7 +25,7 @@ module.exports = {
 			session4: "evening",
 			leaveType1: "left",
 			leaveType2: "was kicked from",
-			defaultLeaveMessage: "{userName} {type} the group"
+			defaultLeaveMessage: "{userName} {type} the group. There are {memberCount} members left on gc."
 		}
 	},
 
@@ -43,6 +43,7 @@ module.exports = {
 
 				const threadName = threadData.threadName;
 				const userName = await usersData.getName(leftParticipantFbId);
+				const memberCount = threadInfo.memberIDs.length;
 
 				// {userName}   : name of the user who left the group
 				// {type}       : type of the message (leave)
@@ -50,6 +51,7 @@ module.exports = {
 				// {threadName} : name of the box
 				// {time}       : time
 				// {session}    : session
+				// {memberCount}      : Member count on box
 
 				let { leaveMessage = getLang("defaultLeaveMessage") } = threadData.data;
 				const form = {
