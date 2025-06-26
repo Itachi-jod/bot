@@ -1,192 +1,160 @@
-const axios = require('axios');
+const axios = require("axios");
 
-// config 
-const apiKey = "";
-const maxTokens = 500;
-const numberGenerateImage = 4;
-const maxStorageMessage = 4;
+console.log(`[GPT] Loading gpt.js from: ${__dirname}`);
 
-if (!global.temp.openAIUsing)
-	global.temp.openAIUsing = {};
-if (!global.temp.openAIHistory)
-	global.temp.openAIHistory = {};
+const API_KEY = "7eac9dce-b646-4ad1-8148-5b58eddaa2cc";
+const BASE_URL = "https://kaiz-apis.gleeze.com/api/gpt-4o";
 
-const { openAIUsing, openAIHistory } = global.temp;
+async function fetchGptResponse(query, userId) {
+ const endpoints = [
+ `${BASE_URL}?ask=${encodeURIComponent(query)}&uid=${userId}&webSearch=true&apikey=${API_KEY}`,
+ `${BASE_URL}?ask=${encodeURIComponent(query)}&uid=${userId}&webSearch=Nepal&apikey=${API_KEY}`,
+ `${BASE_URL}?ask=${encodeURIComponent(query)}&uid=${userId}&apikey=${API_KEY}`,
+ `${BASE_URL}?ask=${encodeURIComponent(query)}&apikey=${API_KEY}`,
+ ];
+
+ for (const [index, apiUrl] of endpoints.entries()) {
+ console.log(`[GPT] Attempting endpoint ${index + 1}/${endpoints.length}: ${apiUrl}`);
+ try {
+ const response = await retryRequest(apiUrl, 3, 1000);
+ const data = response.data;
+ console.log(`[GPT] API Response from ${apiUrl}: ${JSON.stringify(data, null, 2)}`);
+ console.log(`[GPT] Response Headers: ${JSON.stringify(response.headers, null, 2)}`);
+
+ const textResponse = data?.response ||
+ data?.data?.response ||
+ data?.answer ||
+ data?.data?.answer ||
+ data?.text ||
+ data?.data?.text ||
+ data?.result ||
+ data?.data?.result ||
+ findTextResponse(data);
+
+ if (!textResponse) {
+ console.log(`[GPT] No valid response found in API data from ${apiUrl}`);
+ continue;
+ }
+
+ if (typeof textResponse !== "string" || textResponse.trim() === "") {
+ console.log(`[GPT] Invalid response format: ${textResponse}`);
+ continue;
+ }
+
+ return textResponse;
+ } catch (error) {
+ console.error(`[GPT] Endpoint ${apiUrl} failed: ${error.message}`);
+ if (index === endpoints.length - 1) {
+ throw error;
+ }
+ }
+ }
+ throw new Error("No valid response found in any endpoint.");
+}
+
+function findTextResponse(obj) {
+ if (typeof obj !== "object" || obj === null) return null;
+ for (const key in obj) {
+ const value = obj[key];
+ if (typeof value === "string" && value.trim() !== "") {
+ return value;
+ } else if (typeof value === "object") {
+ const nestedResponse = findTextResponse(value);
+ if (nestedResponse) return nestedResponse;
+ }
+ }
+ return null;
+}
+
+async function retryRequest(url, retries = 3, delay = 1000) {
+ for (let i = 0; i < retries; i++) {
+ try {
+ return await axios.get(url, { timeout: 30000 });
+ } catch (error) {
+ const status = error.response?.status;
+ const message = error.message || "Unknown error";
+ console.error(`[GPT] Request to ${url} failed (attempt ${i + 1}/${retries}): ${status} - ${message}`);
+ if (status === 429 && i < retries - 1) {
+ console.log(`[GPT] Rate limit hit, retrying in ${delay}ms...`);
+ await new Promise(resolve => setTimeout(resolve, delay));
+ continue;
+ }
+ throw error;
+ }
+ }
+}
+
+async function handleGptCommand(api, event, args) {
+ const { threadID, messageID, senderID } = event;
+ const query = args.join(" ").trim() || "Hello";
+
+ try {
+ console.log(`[GPT] Command received: query=${query}, senderID=${senderID}, threadID=${threadID}, messageID=${messageID}`);
+
+ // React ⏳
+ api.setMessageReaction("⏳", messageID, (err) => {
+ if (err) console.error(`[GPT] Reaction ⏳ error: ${err.message}`);
+ }, true);
+
+ const responseText = await fetchGptResponse(query, senderID);
+
+ console.log(`[GPT] Sending response: ${responseText.substring(0, 100)}...`);
+
+ await api.sendMessage(
+ `GPT-4o says: ${responseText}`,
+ threadID,
+ (err) => {
+ if (err) {
+ console.error(`[GPT] Send message error: ${err.message}`);
+ api.sendMessage("❌ Failed to send GPT-4o response.", threadID, messageID);
+ api.setMessageReaction("❌", messageID, () => {}, true);
+ } else {
+ api.setMessageReaction("✅", messageID, () => {}, true);
+ }
+ },
+ messageID
+ );
+
+ } catch (error) {
+ console.error(`[GPT] Error: ${error.message}`);
+ const status = error.response?.status;
+ let errorMessage;
+ if (status === 400) {
+ errorMessage = "Bad request. The API key or parameters may be incorrect. Contact kaiz-apis.gleeze.com for support.";
+ } else if (status === 403) {
+ errorMessage = "Invalid API key. Please verify the key with kaiz-apis.gleeze.com.";
+ } else if (status === 404) {
+ errorMessage = "API endpoint not found. Contact kaiz-apis.gleeze.com for the correct endpoint.";
+ } else if (status === 429) {
+ errorMessage = "API rate limit exceeded. Please try again later.";
+ } else {
+ errorMessage = error.message || "❌ Sorry, couldn’t get a response from GPT-4o. Try again!";
+ }
+ await api.sendMessage(errorMessage, threadID, messageID);
+ api.setMessageReaction("❌", messageID, (err) => {
+ if (err) console.error(`[GPT] Reaction ❌ error: ${err.message}`);
+ }, true);
+ }
+}
 
 module.exports = {
-	config: {
-		name: "gpt",
-		version: "1.4",
-		author: "NTKhang",
-		countDown: 5,
-		role: 0,
-		description: {
-			vi: "GPT chat",
-			en: "GPT chat"
-		},
-		category: "box chat",
-		guide: {
-			vi: "   {pn} <draw> <nội dung> - tạo hình ảnh từ nội dung"
-				+ "\n   {pn} <clear> - xóa lịch sử chat với gpt"
-				+ "\n   {pn} <nội dung> - chat với gpt",
-			en: "   {pn} <draw> <content> - create image from content"
-				+ "\n   {pn} <clear> - clear chat history with gpt"
-				+ "\n   {pn} <content> - chat with gpt"
-		}
-	},
+ config: {
+ name: "gpt",
+ version: "1.0.1",
+ author: "Lord Itachi",
+ countDown: 5,
+ role: 0, // Open to all users
+ shortDescription: "Ask GPT-4o a question",
+ longDescription: "Use this command to get responses from GPT-4o via kaiz-apis.gleeze.com, similar to neko.",
+ category: "ai",
+ guide: "{pn} <question> (e.g., {pn}gpt What is the capital of Nepal?)"
+ },
 
-	langs: {
-		vi: {
-			apiKeyEmpty: "Vui lòng cung cấp api key cho openai tại file scripts/cmds/gpt.js",
-			invalidContentDraw: "Vui lòng nhập nội dung bạn muốn vẽ",
-			yourAreUsing: "Bạn đang sử dụng gpt chat, vui lòng chờ quay lại sau khi yêu cầu trước kết thúc",
-			processingRequest: "Đang xử lý yêu cầu của bạn, quá trình này có thể mất vài phút, vui lòng chờ",
-			invalidContent: "Vui lòng nhập nội dung bạn muốn chat",
-			error: "Đã có lỗi xảy ra\n%1",
-			clearHistory: "Đã xóa lịch sử chat của bạn với gpt"
-		},
-		en: {
-			apiKeyEmpty: "Please provide api key for openai at file scripts/cmds/gpt.js",
-			invalidContentDraw: "Please enter the content you want to draw",
-			yourAreUsing: "You are using gpt chat, please wait until the previous request ends",
-			processingRequest: "Processing your request, this process may take a few minutes, please wait",
-			invalidContent: "Please enter the content you want to chat",
-			error: "An error has occurred\n%1",
-			clearHistory: "Your chat history with gpt has been deleted"
-		}
-	},
+ onStart: async function ({ api, event, args }) {
+ return handleGptCommand(api, event, args);
+ },
 
-	onStart: async function ({ message, event, args, getLang, prefix, commandName }) {
-		if (!apiKey)
-			return message.reply(getLang('apiKeyEmpty', prefix));
-
-		switch (args[0]) {
-			case 'img':
-			case 'image':
-			case 'draw': {
-				if (!args[1])
-					return message.reply(getLang('invalidContentDraw'));
-				if (openAIUsing[event.senderID])
-					return message.reply(getLang("yourAreUsing"));
-
-				openAIUsing[event.senderID] = true;
-
-				let sending;
-				try {
-					sending = message.reply(getLang('processingRequest'));
-					const responseImage = await axios({
-						url: "https://api.openai.com/v1/images/generations",
-						method: "POST",
-						headers: {
-							"Authorization": `Bearer ${apiKey}`,
-							"Content-Type": "application/json"
-						},
-						data: {
-							prompt: args.slice(1).join(' '),
-							n: numberGenerateImage,
-							size: '1024x1024'
-						}
-					});
-					const imageUrls = responseImage.data.data;
-					const images = await Promise.all(imageUrls.map(async (item) => {
-						const image = await axios.get(item.url, {
-							responseType: 'stream'
-						});
-						image.data.path = `${Date.now()}.png`;
-						return image.data;
-					}));
-					return message.reply({
-						attachment: images
-					});
-				}
-				catch (err) {
-					const errorMessage = err.response?.data.error.message || err.message;
-					return message.reply(getLang('error', errorMessage || ''));
-				}
-				finally {
-					delete openAIUsing[event.senderID];
-					message.unsend((await sending).messageID);
-				}
-			}
-			case 'clear': {
-				openAIHistory[event.senderID] = [];
-				return message.reply(getLang('clearHistory'));
-			}
-			default: {
-				if (!args[0])
-					return message.reply(getLang('invalidContent'));
-
-				handleGpt(event, message, args, getLang, commandName);
-			}
-		}
-	},
-
-	onReply: async function ({ Reply, message, event, args, getLang, commandName }) {
-		const { author } = Reply;
-		if (author != event.senderID)
-			return;
-
-		handleGpt(event, message, args, getLang, commandName);
-	}
+ onLoad: async function () {
+ console.log(`[GPT] Command loaded successfully`);
+ }
 };
-
-async function askGpt(event) {
-	const response = await axios({
-		url: "https://api.openai.com/v1/chat/completions",
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${apiKey}`,
-			"Content-Type": "application/json"
-		},
-		data: {
-			model: "gpt-3.5-turbo",
-			messages: openAIHistory[event.senderID],
-			max_tokens: maxTokens,
-			temperature: 0.7
-		}
-	});
-	return response;
-}
-
-async function handleGpt(event, message, args, getLang, commandName) {
-	try {
-		openAIUsing[event.senderID] = true;
-
-		if (
-			!openAIHistory[event.senderID] ||
-			!Array.isArray(openAIHistory[event.senderID])
-		)
-			openAIHistory[event.senderID] = [];
-
-		if (openAIHistory[event.senderID].length >= maxStorageMessage)
-			openAIHistory[event.senderID].shift();
-
-		openAIHistory[event.senderID].push({
-			role: 'user',
-			content: args.join(' ')
-		});
-
-		const response = await askGpt(event);
-		const text = response.data.choices[0].message.content;
-
-		openAIHistory[event.senderID].push({
-			role: 'assistant',
-			content: text
-		});
-
-		return message.reply(text, (err, info) => {
-			global.GoatBot.onReply.set(info.messageID, {
-				commandName,
-				author: event.senderID,
-				messageID: info.messageID
-			});
-		});
-	}
-	catch (err) {
-		const errorMessage = err.response?.data.error.message || err.message || "";
-		return message.reply(getLang('error', errorMessage));
-	}
-	finally {
-		delete openAIUsing[event.senderID];
-	}
-}
