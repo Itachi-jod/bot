@@ -1,43 +1,56 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = {
   config: {
     name: "anivoice",
-    aliases: ["aniaudio"],
-    author: "Kshitiz",
-    version: "1.0",
+    aliases: [ "animevoice"],
+    version: "1.1",
+    author: "kshitiz (updated by minato)",
+    description: "Sends a random anime voice from allowed categories",
+    guide: "{pn}anivoice naruto",
     cooldowns: 5,
-    role: 0,
-    shortDescription: "Get anime voice",
-    longDescription: "Get anime voice based on animeName",
-    category: "anime",
-    guide: "{p}anivoice animeName",
+   
   },
 
-  onStart: async function ({ api, event, args, message }) {
-    api.setMessageReaction("⏰", event.messageID, (err) => {}, true);
-    const categories = ["jjk", "naruto", "ds", "aot", "bleach", "onepiece"];
+  onStart: async function ({ args, api, event }) {
+    const allowedCategories = ['jjk', 'naruto', 'ds', 'aot', 'bleach', 'onepiece'];
+    const category = args[0]?.toLowerCase();
 
-    if (args.length !== 1 || !categories.includes(args[0].toLowerCase())) {
-      return message.reply(`Please specify a valid category. Available categories: ${categories.join(", ")}`);
+    if (!category || !allowedCategories.includes(category)) {
+      return api.sendMessage(
+        `Invalid category! Please choose one from the allowed list:\n${allowedCategories.join(", ")}`, 
+        event.threadID,
+        event.messageID // reply to user's message
+      );
     }
 
     try {
-      const category = args[0].toLowerCase();
-      const response = await axios.get(`https://anivoice-opef.onrender.com/kshitiz/${category}`, { responseType: "arraybuffer" });
+      const response = await axios.get(`https://anivoice-opef.onrender.com/kshitiz/${category}`, {
+        responseType: 'arraybuffer'
+      });
 
-      const tempVoicePath = path.join(__dirname, "cache", `${Date.now()}.mp3`);
-      fs.writeFileSync(tempVoicePath, Buffer.from(response.data, 'binary'));
+      const tempFilePath = path.join(__dirname, 'temp_voice.mp3');
+      fs.writeFileSync(tempFilePath, response.data);
 
-      const stream = fs.createReadStream(tempVoicePath);
-      message.reply({ attachment: stream });
-
-      api.setMessageReaction("✅", event.messageID, (err) => {}, true);
+      api.sendMessage(
+        { 
+          attachment: fs.createReadStream(tempFilePath)
+        }, 
+        event.threadID,
+        () => {
+          fs.unlinkSync(tempFilePath);
+        },
+        event.messageID // reply to user's message
+      );
     } catch (error) {
       console.error(error);
-      message.reply("Sorry, an error occurred while processing your request.");
+      api.sendMessage(
+        "Error fetching or sending voice audio.", 
+        event.threadID,
+        event.messageID // reply to user's message
+      );
     }
   }
 };
