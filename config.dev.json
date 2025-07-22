@@ -39,16 +39,16 @@
   "timeZone": "Asia/Dhaka",
   "credentials": {
     "gmailAccount": {
-      "email": "minatocode444@gmail.com",
-      "clientId": "1041515077310-384cnr5aqm3cdj9v02d0tq73svm2k7ak.apps.googleusercontent.com",
-      "clientSecret": "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",
-      "refreshToken": "1//04ywo_EqGdDHECgYIARAAGAQSNwF-L9IrNtLWXqsm4QQYXdqJiiabAe1dbTEcINyPYJtd0S3pNMPPfVIefgt7XwwyxO3Be2liqes",
+      "email": "romeobot555@gmail.com",
+      "clientId": "938512788954-ndaggmsbqkf0a6ougkc7p0iek446ikt1.apps.googleusercontent.com",
+      "clientSecret": "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",
+      "refreshToken": "1//046ZXiqfQpbF1CgYIARAAGAQSNwF-L9Ir8uPenmtD9Co8psKc7goPgaxSfYG_TJreIbnB1mKgwC0vKP9t4Ir-kxjf-YMNGd124TQ",
       "apiKey": ""
     },
     "gRecaptcha": {
-      "siteKey": "6LfR_XMrAAAAAGe6VSHlitLyRrQ2cmO7nD6L1LLU",
-      "secretKey": "6LfR_XMrAAAAAO0TdvPuKuNC8NB8Ar7ink_wvIqe"
-}
+      "siteKey": "6LfH6HQrAAAAACmNc3LTiJFLiUvMpFblCUqj6pd1",
+      "secretKey": "6LfH6HQrAAAAAEhnFm96bt-CeDuXcAGDFKeWPVEq"
+    }
   },
   "dashBoard": {
     "enable": true,
@@ -141,4 +141,4 @@
     "autoReconnect": false,
     "notes": "Document here: https://github.com/ntkhang03/fb-chat-api/blob/master/DOCS.md#apisetoptionsoptions "
   }
-}
+  }
