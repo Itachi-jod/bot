@@ -6,14 +6,14 @@ const { parse } = require("url");
 module.exports = {
   config: {
     name: "autolink",
-    version: "2.3",
-    author: "Lord Itachi + Minato",
+    version: "3.0",
+    author: "MinatoCodes",
     countDown: 5,
     role: 0,
     shortDescription: "Auto-detect video links and download them",
-    longDescription: "Detects video links in chat and downloads the video automatically.",
+    longDescription: "Automatically downloads videos from supported platforms using Minato API.",
     category: "media",
-    guide: "No need to use command. Just send a video link.",
+    guide: "Just send a supported video link in the chat."
   },
 
   onStart: async function () {},
@@ -26,48 +26,33 @@ module.exports = {
 
       const url = urlMatch[0];
       const hostname = parse(url).hostname || "";
-      let apiUrl;
-
-      // Determine which API to use
-      if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) {
-        apiUrl = `https://kaiz-apis.gleeze.com/api/yt-down?url=${encodeURIComponent(url)}&apikey=67609e3c-abd9-4261-9b7b-fde637c0ba9d`;
-      } else {
-        apiUrl = `https://dev-priyanshi.onrender.com/api/alldl?url=${encodeURIComponent(url)}`;
-      }
+      const apiUrl = `https://minato-dl.vercel.app/api/alldl?url=${encodeURIComponent(url)}`;
 
       api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
       const res = await axios.get(apiUrl, { timeout: 30000 });
 
-      let videoUrl;
-
-      if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) {
-        const ytData = res.data.response["720p"] || res.data.response["360p"];
-        if (!ytData) {
-          api.setMessageReaction("❌", event.messageID, () => {}, true);
-          return message.reply("❌ No downloadable YouTube video found.");
-        }
-        videoUrl = ytData.download_url;
-      } else {
-        videoUrl = res.data?.data?.low;
-      }
+      // Extract best available video URL
+      let videoUrl =
+        res.data?.download_url;
 
       if (!videoUrl || !videoUrl.startsWith("http")) {
         api.setMessageReaction("❌", event.messageID, () => {}, true);
-        return;
+        return message.reply("❌ No downloadable video found.");
       }
 
-      const response = await axios({
-        method: "GET",
-        url: videoUrl,
-        responseType: "stream",
-        timeout: 60000,
-      });
-
+      // Download video
       const cacheDir = path.join(__dirname, "cache");
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
       const filePath = path.join(cacheDir, `video_${Date.now()}.mp4`);
+      const response = await axios({
+        method: "GET",
+        url: videoUrl,
+        responseType: "stream",
+        timeout: 60000
+      });
+
       const writer = fs.createWriteStream(filePath);
       response.data.pipe(writer);
 
@@ -76,6 +61,7 @@ module.exports = {
         writer.on("error", reject);
       });
 
+      // Check size limit (100MB)
       const fileSizeMB = fs.statSync(filePath).size / (1024 * 1024);
       if (fileSizeMB > 100) {
         fs.unlinkSync(filePath);
@@ -83,6 +69,7 @@ module.exports = {
         return message.reply("❌ The video is too large to send (over 100MB).");
       }
 
+      // Detect platform
       let platform = "Unknown";
       if (hostname.includes("tiktok")) platform = "TikTok";
       else if (hostname.includes("instagram")) platform = "Instagram";
@@ -92,8 +79,9 @@ module.exports = {
 
       await api.sendMessage(
         {
-          body: `Here's your downloaded video!\n\nPlatform: ${platform}`,
-          attachment: fs.createReadStream(filePath),
+          body: `Here's your downloaded video!
+\nPlatform: ${platform}`,
+          attachment: fs.createReadStream(filePath)
         },
         event.threadID,
         (err) => {
@@ -111,5 +99,5 @@ module.exports = {
       console.error("AutoLink Error:", err.message);
       api.setMessageReaction("❌", event.messageID, () => {}, true);
     }
-  },
+  }
 };
