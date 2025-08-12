@@ -4,9 +4,9 @@ module.exports = {
   config: {
     name: "4k",
     aliases: ["upscale"],
-    version: "1.2",
+    version: "1.3",
     role: 0,
-    author: "Fahim_Noob",
+    author: "ItachiInx1de",
     countDown: 5,
     longDescription: "Upscale images to 4K resolution.",
     category: "image",
@@ -15,7 +15,6 @@ module.exports = {
     }
   },
   onStart: async function ({ message, event }) {
-    // Check if the user replied to a message with an image
     if (
       !event.messageReply ||
       !event.messageReply.attachments ||
@@ -26,28 +25,18 @@ module.exports = {
     }
 
     const imgUrl = encodeURIComponent(event.messageReply.attachments[0].url);
-    const apiUrl = `https://smfahim.xyz/4k?url=${imgUrl}`;
+    const apiUrl = `https://4k-api.vercel.app/api/upscale?url=${imgUrl}`;
 
-    // Notify user that processing has started
     const processingMsg = await message.reply("🔄| Processing... Please wait a moment.");
 
     try {
-      // Request upscale from the API
-      const response = await axios.get(apiUrl);
+      const imageStream = await global.utils.getStreamFromURL(apiUrl, "upscaled-image.png");
 
-      if (!response.data || !response.data.image) {
-        throw new Error("Invalid API response.");
-      }
-
-      const imageStream = await global.utils.getStreamFromURL(response.data.image, "upscaled-image.png");
-
-      // Send the upscaled image to the user
       await message.reply({
         body: "✅| Here is your 4K upscaled image:",
-        attachment: imageStream,
+        attachment: imageStream
       });
 
-      // Remove the processing message
       if (processingMsg.messageID) {
         await message.unsend(processingMsg.messageID);
       }
