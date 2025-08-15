@@ -7,8 +7,8 @@ const { commands, aliases } = global.GoatBot;
 module.exports = {
   config: {
     name: "help",
-    version: "2.1",
-    author: "Itachi Sensei ",
+    version: "2.2",
+    author: "ItachiInx1de",
     countDown: 5,
     role: 0,
     shortDescription: { en: "View all commands and their usage" },
@@ -18,60 +18,82 @@ module.exports = {
     priority: 1,
   },
 
-  onStart: async function ({ message, args, event, threadsData, role }) {
+  onStart: async function ({ message, args, event, role }) {
     const { threadID } = event;
     const prefix = getPrefix(threadID);
+    const tempFiles = [];
 
-    if (args.length === 0) {
-      const categories = {};
-      let msg = "╔════════════╗\n";
-      msg += "║        HELP MENU        ║\n";
-      msg += "╚════════════╝\n";
+    // Random search list
+    const searchList = ["zoro", "madara", "obito", "luffy", "itachi", "tanjiro", "akaza", "nezuko", "muzan", "sukuna", "goku", "senpai"];
+    const randomSearch = searchList[Math.floor(Math.random() * searchList.length)];
 
-      for (const [name, value] of commands) {
-        if (value.config.role > 1 && role < value.config.role) continue;
-        const category = value.config.category || "Uncategorized";
-        categories[category] = categories[category] || [];
-        categories[category].push(name);
+    try {
+      // Fetch a random image from your Pinterest API
+      const apiUrl = `https://pin-api-itachi.vercel.app/api/pinterest?q=${encodeURIComponent(randomSearch)}`;
+      const res = await axios.get(apiUrl, { timeout: 15000 });
+      const images = extractImageUrls(res.data);
+
+      let helpImageStream = null;
+      if (images.length > 0) {
+        const randomImageUrl = images[Math.floor(Math.random() * images.length)];
+        const imgResponse = await axios.get(randomImageUrl, { responseType: "arraybuffer" });
+        const cacheDir = path.join(__dirname, "cache");
+        await fs.ensureDir(cacheDir);
+        const imgPath = path.join(cacheDir, `help_${Date.now()}.jpg`);
+        await fs.outputFile(imgPath, imgResponse.data);
+        tempFiles.push(imgPath);
+        helpImageStream = fs.createReadStream(imgPath);
       }
 
-      for (const [category, cmds] of Object.entries(categories)) {
-        msg += `\n╭───── ${category.toUpperCase()} ────\n`;
-        cmds.sort().forEach(cmd => {
-          msg += `│ →${cmd}\n`;
+      if (args.length === 0) {
+        const categories = {};
+        let msg = "╔════════════╗\n";
+        msg += "║        HELP MENU        ║\n";
+        msg += "╚════════════╝\n";
+
+        for (const [name, value] of commands) {
+          if (value.config.role > 1 && role < value.config.role) continue;
+          const category = value.config.category || "Uncategorized";
+          categories[category] = categories[category] || [];
+          categories[category].push(name);
+        }
+
+        for (const [category, cmds] of Object.entries(categories)) {
+          msg += `\n╭───── ${category.toUpperCase()} ────\n`;
+          cmds.sort().forEach(cmd => {
+            msg += `│ →${cmd}\n`;
+          });
+          msg += `╰─────────────\n`;
+        }
+
+        msg += "╔═════════════╗\n";
+        msg += `║ Total commands: ${commands.size}\n`;
+        msg += `║ Type "${prefix}help [command]" for details.\n`;
+        msg += "╚═════════════╝\n";
+        msg += "┌─────────────┐\n";
+        msg += "│ Created by Itachi Sensei\n";
+        msg += "└─────────────┘";
+
+        await message.reply({
+          body: msg,
+          attachment: helpImageStream || null,
         });
-        msg += `╰─────────────\n`;
-      }
 
-      msg += "╔═════════════╗\n";
-      msg += `║ Total commands: ${commands.size}\n`;
-      msg += `║ Type "${prefix}help [command]" for details.\n`;
-      msg += "╚═════════════╝\n";
-      msg += "┌─────────────┐\n";
-      msg += "│ Created by Itachi Sensei\n";
-      msg += "└─────────────┘";
+      } else {
+        const commandName = args[0].toLowerCase();
+        const command = commands.get(commandName) || commands.get(aliases.get(commandName));
 
-      const helpListImage = "https://i.ibb.co/YFP565g4/image.jpg";
-      await message.reply({
-        body: msg,
-        attachment: await global.utils.getStreamFromURL(helpListImage),
-      });
+        if (!command) {
+          await message.reply(`Command "${commandName}" not found.`);
+          return;
+        }
 
-    } else {
-      const commandName = args[0].toLowerCase();
-      const command = commands.get(commandName) || commands.get(aliases.get(commandName));
+        const config = command.config;
+        const usage = (config.guide?.en || "No guide available")
+          .replace(/{p}/g, prefix)
+          .replace(/{n}/g, config.name);
 
-      if (!command) {
-        await message.reply(`Command "${commandName}" not found.`);
-        return;
-      }
-
-      const config = command.config;
-      const usage = (config.guide?.en || "No guide available")
-        .replace(/{p}/g, prefix)
-        .replace(/{n}/g, config.name);
-
-      const detail = `
+        const detail = `
 ╔══════════════╗
 🔹 *Command:* ${config.name}
 📖 *Description:* ${config.longDescription?.en || "No description"}
@@ -89,7 +111,15 @@ ${usage}
 ╚══════════════╝
 `;
 
-      await message.reply(detail);
+        await message.reply(detail);
+      }
+    } catch (err) {
+      console.error(`[HELP] Error: ${err.message}`);
+      await message.reply(`❌ | Error fetching help or image: ${err.message}`);
+    } finally {
+      for (const file of tempFiles) {
+        try { await fs.unlink(file); } catch {}
+      }
     }
   },
 };
@@ -102,3 +132,25 @@ function roleTextToString(role) {
     default: return "Unknown";
   }
 }
+
+// Extract image URLs safely from your API response
+function extractImageUrls(data) {
+  const urls = new Set();
+
+  function addIfValid(u) {
+    if (typeof u === "string" && /^https?:\/\//.test(u)) urls.add(u);
+  }
+
+  function walk(obj) {
+    if (!obj) return;
+    if (Array.isArray(obj)) obj.forEach(walk);
+    else if (typeof obj === "object") {
+      if (obj.url) addIfValid(obj.url);
+      if (obj.image_url) addIfValid(obj.image_url);
+      Object.values(obj).forEach(walk);
+    } else if (typeof obj === "string") addIfValid(obj);
+  }
+
+  walk(data);
+  return Array.from(urls);
+                                                 }
