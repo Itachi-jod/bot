@@ -8,8 +8,8 @@ module.exports = {
   config: {
     name: "pin",
     aliases: ["pinterest"],
-    version: "1.0.7",
-    author: "MinatoCodes",
+    version: "1.0.9",
+    author: "ItachiInx1de",
     role: 0,
     countDown: 10,
     shortDescription: {
@@ -17,7 +17,7 @@ module.exports = {
     },
     category: "image",
     guide: {
-      en: "{prefix}pin <search query> <count>\n{prefix}pin <search query> -<count>"
+      en: "{prefix}pin <search query> <count>\nExample: {prefix}pin cats -3"
     }
   },
 
@@ -25,14 +25,14 @@ module.exports = {
     const tempFiles = [];
 
     try {
-      if (args.length === 0) {
+      if (!args.length) {
         return api.sendMessage(`❌ | Please provide a search query.\nExample: {prefix}pin cats -3`, event.threadID, event.messageID);
       }
 
       let query = args.join(" ");
       let count = 1;
 
-      // Check if user used dash or space format
+      // Detect "-<count>" or trailing number
       const dashIndex = query.lastIndexOf("-");
       if (dashIndex !== -1) {
         const possibleNum = parseInt(query.substring(dashIndex + 1).trim());
@@ -56,30 +56,33 @@ module.exports = {
       const cacheDir = path.join(__dirname, "cache");
       await fs.ensureDir(cacheDir);
 
-      const apiUrl = `https://pinterest-api-delta.vercel.app/api/pinterest?q=${encodeURIComponent(query)}`;
-      const response = await axios.get(apiUrl);
-      const imageData = response.data?.images;
+      // API call
+      const apiUrl = `https://pin-api-itachi.vercel.app/api/pinterest?q=${encodeURIComponent(query)}`;
+      const response = await axios.get(apiUrl, { timeout: 30000 });
 
-      if (!imageData || !Array.isArray(imageData) || imageData.length === 0) {
+      // Extract all possible URLs
+      const imageUrls = extractImageUrls(response.data);
+      if (!imageUrls.length) {
         return api.sendMessage(`❌ | No images found for "${query}".`, event.threadID, event.messageID);
       }
 
       const imgData = [];
-      for (let i = 0; i < Math.min(count, imageData.length); i++) {
-        const imageUrl = imageData[i].image_url;
-
+      for (let i = 0; i < Math.min(count, imageUrls.length); i++) {
+        const imageUrl = imageUrls[i];
         try {
-          const imgResponse = await axios.get(imageUrl, { responseType: "arraybuffer" });
-          const imgPath = path.join(cacheDir, `${Date.now()}-${i + 1}.jpg`);
+          const imgResponse = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 30000 });
+          const extMatch = imageUrl.match(/\.(jpg|jpeg|png|webp)/i);
+          const ext = extMatch ? extMatch[0] : ".jpg";
+          const imgPath = path.join(cacheDir, `${Date.now()}-${i + 1}${ext}`);
           await fs.outputFile(imgPath, imgResponse.data);
           imgData.push(fs.createReadStream(imgPath));
           tempFiles.push(imgPath);
         } catch (error) {
-          console.error(`[PIN] Error downloading image ${imageUrl}: ${error.message}`);
+          console.error(`[PIN] Error downloading ${imageUrl}: ${error.message}`);
         }
       }
 
-      if (imgData.length === 0) {
+      if (!imgData.length) {
         return api.sendMessage(`❌ | Failed to download any images for "${query}".`, event.threadID, event.messageID);
       }
 
@@ -91,16 +94,13 @@ module.exports = {
         event.threadID,
         event.messageID
       );
+
     } catch (error) {
       console.error(`[PIN] Error: ${error.message}`);
       return api.sendMessage(`❌ | Error: ${error.message}`, event.threadID, event.messageID);
     } finally {
       for (const file of tempFiles) {
-        try {
-          await fs.unlink(file);
-        } catch (err) {
-          console.error(`[PIN] File cleanup failed: ${err.message}`);
-        }
+        try { await fs.unlink(file); } catch {}
       }
     }
   },
@@ -114,3 +114,35 @@ module.exports = {
     }
   },
 };
+
+/**
+ * Robust extractor: supports multiple API shapes
+ */
+function extractImageUrls(data) {
+  const urls = new Set();
+
+  function addIfValid(u) {
+    if (typeof u === "string" && /^https?:\/\//.test(u)) {
+      urls.add(u);
+    }
+  }
+
+  function walk(obj) {
+    if (!obj) return;
+    if (Array.isArray(obj)) {
+      obj.forEach(walk);
+    } else if (typeof obj === "object") {
+      // Direct known keys
+      if (obj.url) addIfValid(obj.url);
+      if (obj.image_url) addIfValid(obj.image_url);
+
+      // Traverse all props
+      Object.values(obj).forEach(walk);
+    } else if (typeof obj === "string") {
+      addIfValid(obj);
+    }
+  }
+
+  walk(data);
+  return Array.from(urls);
+  }
