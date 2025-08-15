@@ -1,56 +1,46 @@
-const axios = require("axios");
 const fs = require("fs-extra");
+const axios = require("axios");
 const path = require("path");
 
 module.exports = {
   config: {
     name: "monitor",
     aliases: ["m"],
-    version: "1.1",
-    author: "MinatoCodes",
+    version: "1.3",
+    author: "ItachiInx1de",
     role: 0,
-    shortDescription: { en: "Displays the bot's uptime and ping." },
-    longDescription: { en: "Find out how long the bot has been tirelessly serving you and its current ping." },
+    shortDescription: { en: "Displays the bot's uptime and ping with a random image." },
+    longDescription: { en: "Shows how long the bot has been running and its ping, with a random image from Pinterest." },
     category: "owner",
-    guide: { en: "Use {p}monitor to reveal the bot's uptime and ping." }
+    guide: { en: "Use {p}monitor to reveal the bot's uptime, ping, and a random image." }
   },
 
   onStart: async function ({ api, event }) {
     const startTime = Date.now();
+    const tempFiles = [];
 
     try {
-      // List of search terms
-      const searchList = ["zoro", "madara", "obito", "luffy", "itachi", "tanjiro", "Akaza", "nezuko", "muzan", "sukuna", "goku", "senpai"];
-      const randomSearch = searchList.length ? searchList[Math.floor(Math.random() * searchList.length)] : "itachi";
+      // Random search list
+      const searchList = ["zoro", "madara", "obito", "luffy", "itachi", "tanjiro", "akaza", "nezuko", "muzan", "sukuna", "goku", "senpai"];
+      const randomSearch = searchList[Math.floor(Math.random() * searchList.length)];
 
-      // Build API URL
-      const apiUrl = `https://pinterest-api-delta.vercel.app/api/pinterest?q=${encodeURIComponent(randomSearch)}`;
-      console.log("DEBUG: Fetching from", apiUrl);
+      // Fetch from your Pinterest API
+      const apiUrl = `https://pin-api-itachi.vercel.app/api/pinterest?q=${encodeURIComponent(randomSearch)}`;
+      const res = await axios.get(apiUrl, { timeout: 15000 });
+      const images = extractImageUrls(res.data);
 
-      // Fetch from Pinterest API
-      const res = await axios.get(apiUrl, { timeout: 10000 });
-      const images = res.data?.images || [];
+      if (!images.length) return api.sendMessage("❌ No images found from Pinterest API.", event.threadID, event.messageID);
 
-      if (!images.length) {
-        return api.sendMessage("❌ No images found from Pinterest API.", event.threadID, event.messageID);
-      }
-
-      // Get a random image's URL (matching pin.js structure)
-      const randomImageObj = images[Math.floor(Math.random() * images.length)];
-      const randomImageUrl = randomImageObj?.image_url;
-
-      if (!randomImageUrl || !randomImageUrl.startsWith("http")) {
-        return api.sendMessage("❌ No valid image URL found from Pinterest API.", event.threadID, event.messageID);
-      }
-
-      // Download the image
+      // Random image
+      const randomImageUrl = images[Math.floor(Math.random() * images.length)];
       const imgResponse = await axios.get(randomImageUrl, { responseType: "arraybuffer", timeout: 15000 });
 
       // Save to cache
       const cacheDir = path.join(__dirname, "cache");
       await fs.ensureDir(cacheDir);
-      const imgPath = path.join(cacheDir, "monitor_image.jpg");
-      await fs.outputFile(imgPath, imgResponse.data);
+      const f = path.join(cacheDir, `monitor_${Date.now()}.jpg`);
+      await fs.outputFile(f, imgResponse.data);
+      tempFiles.push(f);
 
       // Calculate uptime
       const uptimeSec = process.uptime();
@@ -59,25 +49,52 @@ module.exports = {
       const minutes = Math.floor((uptimeSec / 60) % 60);
       const seconds = Math.floor(uptimeSec % 60);
 
-      let uptimeStr = `${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`;
-      if (days === 0) uptimeStr = `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
-      if (hours === 0 && days === 0) uptimeStr = `${minutes} minutes, ${seconds} seconds`;
-      if (minutes === 0 && hours === 0 && days === 0) uptimeStr = `${seconds} seconds`;
+      let c = `${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+      if (days === 0) c = `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+      if (hours === 0 && days === 0) c = `${minutes} minutes, ${seconds} seconds`;
+      if (minutes === 0 && hours === 0 && days === 0) c = `${seconds} seconds`;
 
-      const ping = Date.now() - startTime;
+      const m = Date.now() - startTime;
 
-      // Send message
+      // Send message with simplified body
+      const imageStream = fs.createReadStream(f);
       await api.sendMessage({
-        body: `Greetings! Your bot\nhas been running for:\n${uptimeStr}\n\nCurrent Ping: ${ping}ms`,
-        attachment: fs.createReadStream(imgPath)
+        body: `Greetings! Your bot\nhas been running for:\n${c}\n\nCurrent Ping: ${m}`,
+        attachment: imageStream
       }, event.threadID, event.messageID);
-
-      // Clean up cache
-      await fs.unlink(imgPath).catch(() => {});
 
     } catch (error) {
       console.error("Monitor command error:", error);
       return api.sendMessage("⚠️ An error occurred while fetching the monitor info.", event.threadID, event.messageID);
+    } finally {
+      // Clean up cache
+      for (const file of tempFiles) {
+        try { await fs.unlink(file); } catch {}
+      }
     }
   }
 };
+
+/**
+ * Extract all image URLs from your Pinterest API response
+ */
+function extractImageUrls(data) {
+  const urls = new Set();
+
+  function addIfValid(u) {
+    if (typeof u === "string" && /^https?:\/\//.test(u)) urls.add(u);
+  }
+
+  function walk(obj) {
+    if (!obj) return;
+    if (Array.isArray(obj)) obj.forEach(walk);
+    else if (typeof obj === "object") {
+      if (obj.url) addIfValid(obj.url);
+      if (obj.image_url) addIfValid(obj.image_url);
+      Object.values(obj).forEach(walk);
+    } else if (typeof obj === "string") addIfValid(obj);
+  }
+
+  walk(data);
+  return Array.from(urls);
+  }
