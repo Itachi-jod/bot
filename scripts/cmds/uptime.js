@@ -1,32 +1,65 @@
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+
 module.exports = {
   config: {
     name: "uptime",
     aliases: ["up", "upt"],
     version: "1.2",
-    author: "Lord Itachi",
-    countDown: 5,
+    author: "Denish & Itachi",
     role: 0,
     shortDescription: {
-      en: "Shows how long the bot has been active"
+      en: "Displays the uptime of the bot with a random TikTok video."
     },
     longDescription: {
-      en: "Displays the total uptime in a fancy way"
+      en: "Shows how long the bot has been running and sends a random TikTok video."
     },
     category: "system",
     guide: {
-      en: "{pn}"
+      en: "{p}uptime"
     }
   },
 
   onStart: async function ({ api, event }) {
-    const uptime = process.uptime(); // in seconds
-    const days = Math.floor(uptime / (60 * 60 * 24));
-    const hours = Math.floor((uptime % (60 * 60 * 24)) / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = Math.floor(uptime % 60);
+    try {
+      // --- Calculate uptime
+      const uptime = process.uptime();
+      const seconds = Math.floor(uptime % 60);
+      const minutes = Math.floor((uptime / 60) % 60);
+      const hours = Math.floor((uptime / (60 * 60)) % 24);
+      const days = Math.floor(uptime / (60 * 60 * 24));
 
-    const msg = `🤍 𝗕𝗼𝘁 𝗦𝘁𝗮𝘁𝘂𝘀\n━━━━━━━━━━━━━━━\n📆 Days   : ${days}\n⏰ Hours  : ${hours}\n🕰️ Minutes: ${minutes}\n⏱️ Seconds: ${seconds}\n━━━━━━━━━━━━━━━\n✅ 𝗧𝗵𝗲 𝗯𝗼𝘁 𝗶𝘀 𝗿𝘂𝗻𝗻𝗶𝗻𝗴 𝘀𝗺𝗼𝗼𝘁𝗵𝗹𝘆!`;
+      const uptimeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-    api.sendMessage(msg, event.threadID, event.messageID);
+      // --- Fetch random TikTok video
+      const res = await axios.get("https://ttstalk-gamma.vercel.app/api/tikstalk");
+      const videoUrl = res.data.video?.play;
+
+      if (!videoUrl) {
+        return api.sendMessage(
+          `THE BOT IS RUNNING FOR:\n${uptimeString}\n\n❌ Could not fetch TikTok video.`,
+          event.threadID
+        );
+      }
+
+      // --- Download video to cache
+      const videoPath = path.join(__dirname, "cache", `tiktok_${Date.now()}.mp4`);
+      const response = await axios.get(videoUrl, { responseType: "arraybuffer" });
+      fs.writeFileSync(videoPath, response.data);
+
+      // --- Send message with uptime + TikTok
+      api.sendMessage(
+        {
+          body: `THE BOT IS RUNNING FOR 🤷, 🫶🏻💗\n\n(•_•)??\n\n${uptimeString}`,
+          attachment: fs.createReadStream(videoPath)
+        },
+        event.threadID,
+        () => fs.unlinkSync(videoPath) // cleanup after sending
+      );
+    } catch (err) {
+      console.error("Uptime command error:", err);
+      api.sendMessage("❌ | Error fetching uptime or TikTok video.", event.threadID);
+    }
   }
 };
