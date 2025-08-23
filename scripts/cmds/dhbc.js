@@ -4,13 +4,13 @@ const { getStreamFromURL } = global.utils;
 module.exports = {
 	config: {
 		name: "dhbc",
-		version: "1.3",
-		author: "NTKhang",
+		version: "2.0",
+		author: "NTKhang + Modified by Denish",
 		countDown: 5,
 		role: 0,
 		description: {
-			vi: "chơi game đuổi hình bắt chữ",
-			en: "play game catch the word"
+			vi: "Chơi game đoán nhân vật anime",
+			en: "Play anime character guessing game"
 		},
 		category: "game",
 		guide: {
@@ -23,53 +23,63 @@ module.exports = {
 
 	langs: {
 		vi: {
-			reply: "Hãy reply tin nhắn này với câu trả lời\n%1",
-			isSong: "Đây là tên bài hát của ca sĩ %1",
+			reply: "Hãy reply tin nhắn này với tên nhân vật anime (chỉ tên đầu tiên):",
 			notPlayer: "⚠️ Bạn không phải là người chơi của câu hỏi này",
-			correct: "🎉 Chúc mừng bạn đã trả lời đúng và nhận được %1$",
-			wrong: "⚠️ Bạn đã trả lời sai"
+			correct: "🎉 Chính xác! Bạn nhận được %1$",
+			wrong: "❌ Sai rồi! Đáp án đúng là: %1"
 		},
 		en: {
-			reply: "Please reply this message with the answer\n%1",
-			isSong: "This is the name of the song of the singer %1",
+			reply: "Please reply this message with the anime character's first name:",
 			notPlayer: "⚠️ You are not the player of this question",
-			correct: "🎉 Congratulations you have answered correctly and received %1$",
-			wrong: "⚠️ You have answered incorrectly"
+			correct: "🎉 Correct! You received %1$",
+			wrong: "❌ Wrong! The correct answer was: %1"
 		}
 	},
 
 	onStart: async function ({ message, event, commandName, getLang }) {
-		const datagame = (await axios.get("https://goatbotserver.onrender.com/api/duoihinhbatchu")).data;
-		const { wordcomplete, casi, image1, image2 } = datagame.data;
+		try {
+			const res = await axios.get("https://random-animel.vercel.app/api/random-character");
+			const char = res.data.character;
+			const firstName = char.name.split(" ")[0];
 
-		message.reply({
-			body: getLang("reply", wordcomplete.replace(/\S/g, "█ ")) + (casi ? getLang("isSong", casi) : ''),
-			attachment: [
-				await getStreamFromURL(image1),
-				await getStreamFromURL(image2)
-			]
-		}, (err, info) => {
-			global.GoatBot.onReply.set(info.messageID, {
-				commandName,
-				messageID: info.messageID,
-				author: event.senderID,
-				wordcomplete
+			message.reply({
+				body: getLang("reply"),
+				attachment: await getStreamFromURL(char.images.jpg)
+			}, (err, info) => {
+				if (err) return;
+				global.GoatBot.onReply.set(info.messageID, {
+					commandName,
+					messageID: info.messageID,
+					author: event.senderID,
+					character: char,
+					firstName
+				});
 			});
-		});
+		} catch (e) {
+			message.reply("⚠️ Failed to fetch anime character.");
+		}
 	},
 
-	onReply: async ({ message, Reply, event, getLang, usersData, envCommands, commandName }) => {
-		const { author, wordcomplete, messageID } = Reply;
+	onReply: async function ({ message, Reply, event, getLang, usersData, envCommands, commandName, api }) {
+		const { author, messageID, character, firstName } = Reply;
 		if (event.senderID != author)
 			return message.reply(getLang("notPlayer"));
 
-		if (formatText(event.body) == formatText(wordcomplete)) {
-			global.GoatBot.onReply.delete(messageID);
+		// Delete the image question
+		api.unsendMessage(messageID);
+
+		// Check answer (only first name, case-insensitive)
+		const userAns = formatText(event.body.trim().split(" ")[0]);
+		const correct = formatText(firstName);
+
+		global.GoatBot.onReply.delete(messageID);
+
+		if (userAns === correct) {
 			await usersData.addMoney(event.senderID, envCommands[commandName].reward);
 			message.reply(getLang("correct", envCommands[commandName].reward));
+		} else {
+			message.reply(getLang("wrong", character.name));
 		}
-		else
-			message.reply(getLang("wrong"));
 	}
 };
 
